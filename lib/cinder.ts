@@ -37,6 +37,17 @@ export interface ListVolumesOptions {
     consumes_quota?: boolean,
 }
 
+
+interface Attachments {
+  id: string,
+  attachment_id: string,
+  volume_id: string,
+  server_id: string,
+  host_name: null | string,
+  device: string,
+  attached_at: string,
+}
+
 export interface VolumeImageMetadata {
     os_distro: string,
     'owner_specified.openstack.md5': string,
@@ -54,7 +65,7 @@ export interface VolumeImageMetadata {
 
 export type Volume = {
   migration_status?: string,
-  attachments: [],
+  attachments: Attachments[],
   links: [],
   availability_zone?: string,
   "os-vol-host-attr:host"?: string,
@@ -91,11 +102,10 @@ export type Volume = {
   consumes_quota?: boolean,
   count?: number,
 }
-
+// retrieve a list of volumes
 export async function listVolumes(options?:ListVolumesOptions): Promise<Volume[]> {
   const token = await getProjectToken()
   const endpoint = await getServiceEndpoint('cinderv3', 'public')
-
   const params = new URLSearchParams(options as {})
 
   const volumesResponse = await fetch(`${endpoint.url}/volumes/detail?${params}`, {
@@ -109,4 +119,31 @@ export async function listVolumes(options?:ListVolumesOptions): Promise<Volume[]
   const volumesData = await volumesResponse.json()
 
   return volumesData.volumes
+}
+//retrieve a volume by its id
+export async function getVolume(id:string): Promise<Volume> {
+  const token = await getProjectToken()
+  const endpoint = await getServiceEndpoint('cinderv3', 'public')
+  const volumesResponse = await fetch(`${endpoint.url}/volumes/${id}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Auth-Token": token
+    } as HeadersInit,
+  })
+
+  const volumesData = await volumesResponse.json()
+  const volume : Volume = volumesData["volume"]
+
+  return volume
+}
+//retrieve a list of volumes by their ids
+export async function getVolumes(volumeIDs: string[]): Promise<Volume[]> {
+  const volumeList = []
+  for (const volumeID of volumeIDs) {
+    const volume = await getVolume(volumeID)
+    volumeList.push(volume)
+  }
+
+  return volumeList
 }
